@@ -54,12 +54,19 @@ def learn(args, env, dqn):
 
         return eps_reward, np.mean(eps_value)
 
+    train_rewards = []
+    eval_rewards = []
     for eps in range(args["episodes"]):
         train_reward, train_value, train_td = train(eps)
         if eps % 10 == 0:
             eval_reward, eval_value = evaluate()
+        train_rewards.append(train_reward)
+        eval_rewards.append(eval_reward)
         print("Episode: {}, train_reward:{}, eval reward: {}"
-              .format(eps, train_reward, eval_reward))
+              .format(eps,
+                      np.mean(train_rewards[-100:]),
+                      np.mean(eval_rewards[-100:])))
+                        # train_reward, eval_reward))
 
 
 def cartpole():
@@ -86,10 +93,36 @@ def cartpole():
 
 
 def warehouse():
-    pass
+    from gymcolab.envs.warehouse import Warehouse
+    from models import VanillaDqnModel
+
+    args = dict(
+        buffersize=100000,
+        lr=0.001,
+        target_update_ratio=100,
+        gamma=0.99,
+        episodes=1000,
+        update_begin=75,
+        init_eps=0.5,
+        terminal_eps=0.0,
+        batchsize=64,
+    )
+    device = "cuda"
+
+    env = Warehouse()
+    n_nodes, height, width = env.observation_space.shape
+    n_act = env.action_space.n
+    assert height == width, "Environment map must be square"
+    model = VanillaDqnModel(n_nodes, height, n_act)
+    optim = torch.optim.Adam(model.parameters(), lr=args["lr"])
+    dqn = Dqn(model, optim, args["buffersize"])
+    dqn.to(device)
+    learn(args, env, dqn)
+
 
 def warehouse_graph():
     pass
 
+
 if __name__ == "__main__":
-    cartpole()
+    warehouse()
