@@ -7,7 +7,7 @@ class EdgeGraphConv(torch.nn.Module):
         super().__init__()
         init_weight = torch.rand(n_edges, in_size, out_size)
         self.weight = torch.nn.Parameter(init_weight)
-        self.bias = torch.zeros(out_size)
+        self.bias = torch.nn.Parameter(torch.zeros(out_size))
 
     def forward(self, adjacency, feature):
         assert len(feature.shape) == 3, "Feature must be 3 dimensional"
@@ -146,22 +146,35 @@ class VanillaDqnModel(torch.nn.Module):
         values = self.head(state)
         return values
 
+    def reset_weights(self):
+        gain = torch.nn.init.calculate_gain("relu")
+
+        def param_init(module):
+            if isinstance(module, torch.nn.Linear):
+                torch.nn.init.xavier_normal_(module.weight, gain)
+                torch.nn.init.zeros_(module.bias)
+            if isinstance(module, torch.nn.Conv2d):
+                torch.nn.init.dirac_(module.weight)
+                if module.bias is not None:
+                    torch.nn.init.zeros_(module.bias)
+        self.apply(param_init)
+
 
 class FullyConnectedModel(torch.nn.Module):
 
     def __init__(self, in_size, n_act):
         super().__init__()
-        self.fc1 = torch.nn.Linear(in_size, 64)
-        self.fc2 = torch.nn.Linear(64, 64)
-        self.fc3 = torch.nn.Linear(64, 64)
-        self.head = torch.nn.Linear(64, n_act)
+        self.fc1 = torch.nn.Linear(in_size, 32)
+        self.fc2 = torch.nn.Linear(32, 32)
+        # self.fc3 = torch.nn.Linear(32, 32)
+        self.head = torch.nn.Linear(32, n_act)
 
         self.reset_weights()
 
     def forward(self, state):
         state = torch.relu(self.fc1(state))
         state = torch.relu(self.fc2(state))
-        state = torch.relu(self.fc3(state))
+        # state = torch.relu(self.fc3(state))
         values = self.head(state)
         return values
 

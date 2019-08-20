@@ -51,8 +51,9 @@ class Dqn(torch.nn.Module):
         current_values = current_values.gather(1, batch.action)
 
         target_value = next_values*(1 - batch.terminal)*gamma + batch.reward
-        td_error = torch.nn.functional.smooth_l1_loss(current_values,
-                                                      target_value)
+        # td_error = torch.nn.functional.smooth_l1_loss(current_values,
+        #                                               target_value)
+        td_error = torch.nn.functional.mse_loss(current_values, target_value)
 
         return td_error
 
